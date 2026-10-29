@@ -1,490 +1,290 @@
-
 <!DOCTYPE html>
 <html lang="fa" dir="rtl">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>دایره | بازی</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>بازی شکارچی لوزی</title>
+    <!-- لود فونت زیبای وزیر -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;700;900&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            user-select: none;
+            font-family: 'Vazirmatn', sans-serif;
+        }
 
-<style>
-@font-face {
-  font-family: Vazir;
-  src: url("https://cdn.jsdelivr.net/gh/rastikerdar/vazir-font@v30.1.0/dist/Vazir.woff2");
-}
-* { box-sizing: border-box; }
-body {
-  margin: 0;
-  background: #080808;
-  color: white;
-  font-family: Vazir, Tahoma, sans-serif;
-}
-.app {
-  max-width: 600px;
-  margin: auto;
-  padding: 16px;
-}
-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 14px;
-}
-h1 { font-size: 25px; margin: 0; }
-h1 span { color: #ff781f; }
-.stats { display: flex; gap: 10px; }
-.stat {
-  background: #191919;
-  border: 1px solid #333;
-  border-radius: 12px;
-  padding: 7px 12px;
-  text-align: center;
-  min-width: 65px;
-}
-.stat small { display: block; color: #aaa; font-size: 11px; }
-.stat b { font-size: 19px; }
-.arena {
-  position: relative;
-  overflow: hidden;
-  border: 1px solid #292929;
-  border-radius: 18px;
-  background: radial-gradient(ellipse, #211207, #080808 75%);
-}
-canvas {
-  display: block;
-  width: 100%;
-  height: min(65vh, 540px);
-  min-height: 380px;
-  touch-action: none;
-}
-.overlay {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
-  text-align: center;
-  padding: 24px;
-  background: #080808bb;
-  backdrop-filter: blur(4px);
-}
-.overlay.hide { display: none; }
-.orb {
-  width: 65px;
-  height: 65px;
-  border-radius: 50%;
-  background: radial-gradient(circle at 35% 30%, #ffc18f, #ff781f 65%);
-  box-shadow: 0 0 35px #ff781f80;
-  margin-bottom: 22px;
-  animation: pulse 2.5s infinite alternate;
-}
-@keyframes pulse {
-  to { transform: scale(1.08); box-shadow: 0 0 55px #ff781f90; }
-}
-.overlay h2 { font-size: 30px; margin: 0 0 8px; }
-.overlay p {
-  color: #bbb;
-  font-size: 13px;
-  line-height: 2;
-  max-width: 280px;
-}
-button {
-  font-family: inherit;
-  cursor: pointer;
-  touch-action: manipulation;
-}
-.start {
-  background: #ff781f;
-  color: #111;
-  border: 0;
-  border-radius: 12px;
-  padding: 12px 35px;
-  font-size: 14px;
-  font-weight: bold;
-  margin-top: 12px;
-}
-.controls {
-  direction: ltr;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  gap: 14px;
-  padding: 16px 0;
-}
-.move {
-  width: 70px;
-  height: 52px;
-  background: #1a1a1a;
-  color: white;
-  border: 1px solid #383838;
-  border-radius: 14px;
-  font-size: 23px;
-  user-select: none;
-}
-.move:active { background: #ff781f; color: black; }
-.hint {
-  direction: rtl;
-  color: #999;
-  font-size: 11px;
-  text-align: center;
-  line-height: 2;
-}
-footer {
-  color: #999;
-  font-size: 11px;
-  display: flex;
-  justify-content: space-between;
-}
-@media (min-width: 600px) {
-  .app { padding-top: 28px; }
-  canvas { height: 460px; }
-}
-</style>
+        body {
+            background-color: #1a1b1e; /* طوسی تیره */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            overflow: hidden;
+        }
+
+        #game-container {
+            position: relative;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.6);
+            border-radius: 20px;
+            overflow: hidden;
+            border: 2px solid #2d3035;
+        }
+
+        canvas {
+            display: block;
+            background-color: #121316; /* طوسی بسیار تیره برای صفحه بازی */
+            cursor: none; /* مخفی کردن نشانگر ماوس */
+        }
+
+        /* لایه رابط کاربری (UI) */
+        .ui-layer {
+            position: absolute;
+            top: 20px;
+            right: 25px;
+            left: 25px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            pointer-events: none;
+        }
+
+        .score-box {
+            color: #ffffff;
+            font-size: 20px;
+            font-weight: 700;
+            background: rgba(30, 32, 37, 0.85);
+            padding: 8px 18px;
+            border-radius: 12px;
+            border: 1px solid #333842;
+        }
+
+        .score-val {
+            color: #ff7700; /* نارنجی */
+            font-weight: 900;
+            font-size: 24px;
+        }
+
+        /* راهنما */
+        .hint {
+            position: absolute;
+            bottom: 15px;
+            width: 100%;
+            text-align: center;
+            color: #6c727f;
+            font-size: 14px;
+            pointer-events: none;
+        }
+    </style>
 </head>
-
 <body>
-<main class="app">
-  <header>
-    <div>
-      <h1>دایره<span>.</span></h1>
-      <div style="color:#999;font-size:11px">بازی کن، زنده بمان</div>
-    </div>
-    <div class="stats">
-      <div class="stat">
-        <small>امتیاز</small>
-        <b id="score">۰</b>
-      </div>
-      <div class="stat">
-        <small>رکورد</small>
-        <b id="best">۰</b>
-      </div>
-    </div>
-  </header>
 
-  <section class="arena">
-    <canvas id="game"></canvas>
-    <div class="overlay" id="overlay">
-      <div class="orb"></div>
-      <h2 id="title">آماده‌ای؟</h2>
-      <p id="desc">
-        از لوزی‌های سفید فرار کن،
-        دایره‌های نارنجی را بگیر و رکوردت را بشکن.
-      </p>
-      <button class="start" id="start">شروع بازی</button>
+<div id="game-container">
+    <div class="ui-layer">
+        <div class="score-box">دایره‌های نابودشده: <span class="score-val" id="score">0</span></div>
+        <div class="score-box">بیشترین امتیاز: <span class="score-val" id="highScore">0</span></div>
     </div>
-  </section>
-
-  <div class="controls">
-    <button class="move" id="left" aria-label="چپ">←</button>
-    <div class="hint">حرکت با لمس صفحه<br>یا دکمه‌های کناری</div>
-    <button class="move" id="right" aria-label="راست">→</button>
-  </div>
-
-  <footer>
-    <span id="status">آماده شروع</span>
-    <span>نسخه ۱.۰</span>
-  </footer>
-</main>
+    <div class="hint">لوزی نارنجی را با ماوس یا لمس حرکت دهید و دایره‌ها را شکار کنید!</div>
+    <canvas id="gameCanvas" width="800" height="550"></canvas>
+</div>
 
 <script>
-const $ = id => document.getElementById(id);
-const canvas = $("game");
-const ctx = canvas.getContext("2d");
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+    const scoreEl = document.getElementById('score');
+    const highScoreEl = document.getElementById('highScore');
 
-let w = 320, h = 450, dpr = 1;
-let running = false, last = 0;
-let score = 0, best = 0, spawn = 0;
-let playerX = 160, targetX = 160, playerY = 390;
-let objects = [], particles = [], trail = [];
-let left = false, right = false;
-let elapsed = 0;
+    let score = 0;
+    let highScore = 0;
 
-try {
-  best = Number(localStorage.getItem("dayereh-best")) || 0;
-} catch(e) {}
+    // بازیکن (لوزی نارنجی)
+    const player = {
+        x: canvas.width / 2,
+        y: canvas.height / 2,
+        targetX: canvas.width / 2,
+        targetY: canvas.height / 2,
+        size: 22, // شعاع لوزی
+        angle: 0
+    };
 
-const fmt = n => Math.floor(n).toLocaleString("fa-IR");
-$("best").textContent = fmt(best);
+    // لیست دایره‌ها و ذرات متلاشی شده
+    let circles = [];
+    let particles = [];
 
-function resize() {
-  const rect = canvas.getBoundingClientRect();
-  if (!rect.width) return;
+    // ایجاد یک دایره جدید
+    function spawnCircle() {
+        const radius = Math.random() * 10 + 12; // بین ۱۲ تا ۲۲
+        let x, y;
+        // از لبه‌های صفحه وارد شوند
+        if (Math.random() < 0.5) {
+            x = Math.random() < 0.5 ? -radius : canvas.width + radius;
+            y = Math.random() * canvas.height;
+        } else {
+            x = Math.random() * canvas.width;
+            y = Math.random() < 0.5 ? -radius : canvas.height + radius;
+        }
 
-  dpr = Math.min(window.devicePixelRatio || 1, 2);
-  w = rect.width;
-  h = rect.height;
-
-  canvas.width = w * dpr;
-  canvas.height = h * dpr;
-  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-
-  playerY = h - 55;
-  playerX = Math.max(15, Math.min(w - 15, playerX));
-  targetX = playerX;
-  draw();
-}
-
-function circle(x, y, r, color) {
-  ctx.save();
-  ctx.shadowColor = color;
-  ctx.shadowBlur = r * 2.5;
-  ctx.fillStyle = color;
-  ctx.beginPath();
-  ctx.arc(x, y, r, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.restore();
-}
-
-function diamond(x, y, r) {
-  ctx.beginPath();
-  ctx.moveTo(x, y-r);
-  ctx.lineTo(x+r, y);
-  ctx.lineTo(x, y+r);
-  ctx.lineTo(x-r, y);
-  ctx.closePath();
-}
-
-function draw() {
-  ctx.clearRect(0, 0, w, h);
-
-  const bg = ctx.createRadialGradient(
-    w/2, h/2, 10, w/2, h/2, h
-  );
-  bg.addColorStop(0, "#211208");
-  bg.addColorStop(1, "#080808");
-  ctx.fillStyle = bg;
-  ctx.fillRect(0, 0, w, h);
-
-  ctx.strokeStyle = "#ffffff09";
-  for (let y=30; y<h; y+=40) {
-    ctx.beginPath();
-    ctx.moveTo(0,y);
-    ctx.lineTo(w,y);
-    ctx.stroke();
-  }
-
-  for (const o of objects) {
-    if (o.type === "coin") {
-      ctx.strokeStyle = "#ff781f99";
-      ctx.lineWidth = 1.5;
-      ctx.beginPath();
-      ctx.arc(o.x,o.y,o.r+5,0,Math.PI*2);
-      ctx.stroke();
-      circle(o.x,o.y,o.r,"#ff781f");
-    } else {
-      ctx.save();
-      ctx.translate(o.x,o.y);
-      ctx.rotate(o.rot);
-      ctx.shadowColor = "#fff";
-      ctx.shadowBlur = 10;
-      diamond(0,0,o.r);
-      const g = ctx.createLinearGradient(-o.r,-o.r,o.r,o.r);
-      g.addColorStop(0,"#fff");
-      g.addColorStop(1,"#aaa7b0");
-      ctx.fillStyle = g;
-      ctx.fill();
-      ctx.restore();
+        // زاویه و سرعت حرکت
+        const speed = Math.random() * 1.5 + 1.2;
+        const targetAngle = Math.atan2(canvas.height / 2 - y, canvas.width / 2 - x) + (Math.random() - 0.5);
+        
+        circles.push({
+            x: x,
+            y: y,
+            radius: radius,
+            vx: Math.cos(targetAngle) * speed,
+            vy: Math.sin(targetAngle) * speed
+        });
     }
-  }
 
-  for (const p of trail) {
-    ctx.globalAlpha = p.life * .2;
-    circle(p.x,p.y,p.r,"#ff781f");
-  }
-  ctx.globalAlpha = 1;
+    // ساخت ذرات انفجار هنگام کشته شدن دایره
+    function createExplosion(x, y) {
+        for (let i = 0; i < 15; i++) {
+            const angle = Math.random() * Math.PI * 2;
+            const speed = Math.random() * 4 + 1.5;
+            particles.push({
+                x: x,
+                y: y,
+                vx: Math.cos(angle) * speed,
+                vy: Math.sin(angle) * speed,
+                radius: Math.random() * 3 + 1.5,
+                alpha: 1,
+                color: Math.random() > 0.4 ? '#ffffff' : '#ff7700'
+            });
+        }
+    }
 
-  circle(playerX,playerY,10,"#ff781f");
-  circle(playerX-2,playerY-2,3,"#fff0e4");
+    // رسم لوزی
+    function drawDiamond(x, y, size) {
+        ctx.save();
+        ctx.translate(x, y);
+        
+        // افکت نور و درخشش نارنجی
+        ctx.shadowColor = '#ff7700';
+        ctx.shadowBlur = 18;
 
-  for (const p of particles) {
-    ctx.globalAlpha = Math.max(0,p.life);
-    circle(p.x,p.y,p.r,p.color);
-  }
-  ctx.globalAlpha = 1;
-}
+        ctx.beginPath();
+        ctx.moveTo(0, -size * 1.2);   // رأس بالا
+        ctx.lineTo(size, 0);          // رأس راست
+        ctx.lineTo(0, size * 1.2);    // رأس پایین
+        ctx.lineTo(-size, 0);         // رأس چپ
+        ctx.closePath();
 
-function burst(x,y) {
-  for(let i=0;i<12;i++) {
-    const a = Math.random()*Math.PI*2;
-    const v = .8+Math.random()*2;
-    particles.push({
-      x,y,
-      vx:Math.cos(a)*v,
-      vy:Math.sin(a)*v,
-      r:1+Math.random()*2,
-      life:1,
-      color:"#ff781f"
+        ctx.fillStyle = '#ff7700'; // رنگ اصلی نارنجی
+        ctx.fill();
+
+        // یک لوزی کوچک‌تر سفید داخل آن برای زیبایی و برق زدن
+        ctx.beginPath();
+        ctx.moveTo(0, -size * 0.4);
+        ctx.lineTo(size * 0.35, 0);
+        ctx.lineTo(0, size * 0.4);
+        ctx.lineTo(-size * 0.35, 0);
+        ctx.closePath();
+        ctx.fillStyle = '#ffffff';
+        ctx.shadowBlur = 0;
+        ctx.fill();
+
+        ctx.restore();
+    }
+
+    // کنترل با ماوس
+    window.addEventListener('mousemove', (e) => {
+        const rect = canvas.getBoundingClientRect();
+        player.targetX = e.clientX - rect.left;
+        player.targetY = e.clientY - rect.top;
     });
-  }
-}
 
-function update(dt) {
-  elapsed += dt;
-  const frame = dt * 60;
+    // کنترل لمسی برای موبایل و تبلت
+    window.addEventListener('touchmove', (e) => {
+        const rect = canvas.getBoundingClientRect();
+        player.targetX = e.touches[0].clientX - rect.left;
+        player.targetY = e.touches[0].clientY - rect.top;
+    }, { passive: false });
 
-  // حرکت آرام و نرم
-  const speed = Math.max(2,w*.006)*frame;
-  if(left) targetX -= speed;
-  if(right) targetX += speed;
+    // حلقه اصلی بازی
+    let spawnCounter = 0;
 
-  targetX = Math.max(15,Math.min(w-15,targetX));
-  playerX += (targetX-playerX)*Math.min(1,.14*frame);
+    function gameLoop() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-  trail.unshift({
-    x:playerX,y:playerY+6,
-    r:5+Math.random()*3,life:1
-  });
-  if(trail.length>8) trail.pop();
-  trail.forEach(p=>p.life-=.08*frame);
-  trail=trail.filter(p=>p.life>0);
+        // ۱. حرکت روان لوزی به سمت نشانگر ماوس
+        player.x += (player.targetX - player.x) * 0.15;
+        player.y += (player.targetY - player.y) * 0.15;
 
-  // موانع کمتر و کندتر
-  spawn += frame;
-  if(spawn > Math.max(48,82-score*.08)) {
-    spawn=0;
-    objects.push({
-      x:18+Math.random()*(w-36),
-      y:-20,
-      r:7+Math.random()*3,
-      type:Math.random()<.28?"coin":"danger",
-      v:.7+Math.random()*.45+Math.min(.4,score*.0002),
-      rot:Math.random()*6,
-      spin:(Math.random()-.5)*.025
-    });
-  }
+        // ۲. ظاهر کردن دایره‌ها
+        spawnCounter++;
+        if (spawnCounter % 40 === 0 && circles.length < 15) {
+            spawnCircle();
+        }
 
-  for(let i=objects.length-1;i>=0;i--) {
-    const o=objects[i];
-    o.y+=o.v*frame;
-    o.rot+=o.spin*frame;
+        // ۳. به‌روزرسانی و رسم دایره‌ها
+        for (let i = circles.length - 1; i >= 0; i--) {
+            const c = circles[i];
+            c.x += c.vx;
+            c.y += c.vy;
 
-    if(o.y>h+25) {
-      objects.splice(i,1);
-      continue;
+            // رسم دایره سفید
+            ctx.save();
+            ctx.beginPath();
+            ctx.arc(c.x, c.y, c.radius, 0, Math.PI * 2);
+            ctx.fillStyle = '#ffffff';
+            ctx.shadowColor = 'rgba(255, 255, 255, 0.4)';
+            ctx.shadowBlur = 8;
+            ctx.fill();
+            ctx.restore();
+
+            // بررسی برخورد لوزی با دایره (کشتن دایره)
+            const dist = Math.hypot(player.x - c.x, player.y - c.y);
+            if (dist < player.size + c.radius) {
+                createExplosion(c.x, c.y);
+                circles.splice(i, 1);
+                score++;
+                scoreEl.innerText = score;
+                if (score > highScore) {
+                    highScore = score;
+                    highScoreEl.innerText = highScore;
+                }
+                continue;
+            }
+
+            // حذف دایره‌هایی که بیش از حد از صفحه دور شده‌اند
+            if (c.x < -60 || c.x > canvas.width + 60 || c.y < -60 || c.y > canvas.height + 60) {
+                circles.splice(i, 1);
+            }
+        }
+
+        // ۴. رسم و به‌روزرسانی ذرات انفجار
+        for (let i = particles.length - 1; i >= 0; i--) {
+            const p = particles[i];
+            p.x += p.vx;
+            p.y += p.vy;
+            p.alpha -= 0.035;
+
+            if (p.alpha <= 0) {
+                particles.splice(i, 1);
+                continue;
+            }
+
+            ctx.save();
+            ctx.globalAlpha = p.alpha;
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+            ctx.fillStyle = p.color;
+            ctx.fill();
+            ctx.restore();
+        }
+
+        // ۵. رسم لوزی (شخصیت اصلی)
+        drawDiamond(player.x, player.y, player.size);
+
+        requestAnimationFrame(gameLoop);
     }
 
-    if(Math.hypot(o.x-playerX,o.y-playerY)<o.r+10) {
-      if(o.type==="coin") {
-        score+=10;
-        $("score").textContent=fmt(score);
-        burst(o.x,o.y);
-        objects.splice(i,1);
-      } else {
-        burst(playerX,playerY);
-        finish();
-        return;
-      }
-    }
-  }
-
-  for(const p of particles) {
-    p.x+=p.vx*frame;
-    p.y+=p.vy*frame;
-    p.vx*=.98;
-    p.vy*=.98;
-    p.life-=.025*frame;
-  }
-  particles=particles.filter(p=>p.life>0);
-}
-
-function loop(t) {
-  if(!running) return;
-  const dt=last ? Math.min((t-last)/16.67,2) : 1;
-  last=t;
-  update(dt);
-  draw();
-  requestAnimationFrame(loop);
-}
-
-function begin() {
-  if(running) return;
-  score=0;
-  objects=[];
-  particles=[];
-  trail=[];
-  spawn=0;
-  elapsed=0;
-  playerX=targetX=w/2;
-  $("score").textContent=fmt(0);
-  $("status").textContent="در حال بازی";
-  $("overlay").classList.add("hide");
-  running=true;
-  last=0;
-  requestAnimationFrame(loop);
-}
-
-function finish() {
-  running=false;
-
-  if(score>best) {
-    best=score;
-    try {
-      localStorage.setItem("dayereh-best",best);
-    } catch(e) {}
-  }
-
-  $("best").textContent=fmt(best);
-  $("title").textContent="بازی تمام شد";
-  $("desc").textContent=
-    "امتیاز تو: "+fmt(score)+" | رکورد: "+fmt(best);
-  $("start").textContent="دوباره بازی کن";
-  $("status").textContent="بازی تمام شد";
-  $("overlay").classList.remove("hide");
-  draw();
-}
-
-$("start").addEventListener("click",begin);
-
-function bindButton(id,dir) {
-  const b=$(id);
-  const down=e=>{
-    e.preventDefault();
-    if(dir==="left") left=true;
-    else right=true;
-    try { b.setPointerCapture(e.pointerId); } catch(e){}
-  };
-  const up=()=>{
-    if(dir==="left") left=false;
-    else right=false;
-  };
-  b.addEventListener("pointerdown",down);
-  ["pointerup","pointercancel","lostpointercapture"]
-    .forEach(ev=>b.addEventListener(ev,up));
-}
-
-// فلش چپ واقعاً به چپ حرکت می‌دهد
-bindButton("left","left");
-bindButton("right","right");
-
-let touching=false;
-canvas.addEventListener("pointerdown",e=>{
-  if(!running) return;
-  touching=true;
-  canvas.setPointerCapture(e.pointerId);
-  targetX=e.clientX-canvas.getBoundingClientRect().left;
-});
-canvas.addEventListener("pointermove",e=>{
-  if(!running||!touching) return;
-  targetX=e.clientX-canvas.getBoundingClientRect().left;
-});
-["pointerup","pointercancel","lostpointercapture"]
-  .forEach(ev=>canvas.addEventListener(ev,()=>touching=false));
-
-window.addEventListener("keydown",e=>{
-  if(e.key==="ArrowLeft") { left=true; e.preventDefault(); }
-  if(e.key==="ArrowRight") { right=true; e.preventDefault(); }
-  if((e.key===" "||e.key==="Enter")&&!running) begin();
-});
-window.addEventListener("keyup",e=>{
-  if(e.key==="ArrowLeft") left=false;
-  if(e.key==="ArrowRight") right=false;
-});
-
-if("ResizeObserver" in window)
-  new ResizeObserver(resize).observe(canvas);
-else window.addEventListener("resize",resize);
-
-resize();
+    // شروع بازی
+    gameLoop();
 </script>
+
 </body>
 </html>
