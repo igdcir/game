@@ -17,7 +17,7 @@
         }
 
         body {
-            background-color: #1a1b1e; /* طوسی تیره */
+            background-color: #16171a; /* طوسی بسیار تیره */
             display: flex;
             justify-content: center;
             align-items: center;
@@ -27,19 +27,19 @@
 
         #game-container {
             position: relative;
-            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.6);
+            box-shadow: 0 15px 50px rgba(0, 0, 0, 0.7);
             border-radius: 20px;
             overflow: hidden;
-            border: 2px solid #2d3035;
+            border: 2px solid #282a30;
         }
 
         canvas {
             display: block;
-            background-color: #121316; /* طوسی بسیار تیره برای صفحه بازی */
-            cursor: none; /* مخفی کردن نشانگر ماوس */
+            background-color: #101114;
+            cursor: none;
         }
 
-        /* لایه رابط کاربری (UI) */
+        /* لایه نمایش امتیاز */
         .ui-layer {
             position: absolute;
             top: 20px;
@@ -53,18 +53,18 @@
 
         .score-box {
             color: #ffffff;
-            font-size: 20px;
+            font-size: 18px;
             font-weight: 700;
-            background: rgba(30, 32, 37, 0.85);
+            background: rgba(30, 32, 38, 0.85);
             padding: 8px 18px;
             border-radius: 12px;
-            border: 1px solid #333842;
+            border: 1px solid #333742;
         }
 
         .score-val {
-            color: #ff7700; /* نارنجی */
+            color: #ff7700;
             font-weight: 900;
-            font-size: 24px;
+            font-size: 22px;
         }
 
         /* راهنما */
@@ -73,9 +73,69 @@
             bottom: 15px;
             width: 100%;
             text-align: center;
-            color: #6c727f;
+            color: #7b8190;
             font-size: 14px;
             pointer-events: none;
+        }
+
+        /* صفحه باخت (Game Over) */
+        #game-over-screen {
+            position: absolute;
+            inset: 0;
+            background: rgba(16, 17, 20, 0.9);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            gap: 15px;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+        }
+
+        #game-over-screen.active {
+            opacity: 1;
+            pointer-events: all;
+        }
+
+        .game-over-title {
+            color: #ffffff;
+            font-size: 38px;
+            font-weight: 900;
+        }
+
+        .game-over-desc {
+            color: #a0a6b5;
+            font-size: 18px;
+        }
+
+        .final-score {
+            color: #ff7700;
+            font-weight: 900;
+            font-size: 26px;
+        }
+
+        .restart-btn {
+            margin-top: 10px;
+            padding: 12px 35px;
+            background-color: #ff7700;
+            color: #ffffff;
+            font-size: 18px;
+            font-weight: 700;
+            border: none;
+            border-radius: 12px;
+            cursor: pointer;
+            box-shadow: 0 4px 20px rgba(255, 119, 0, 0.4);
+            transition: all 0.2s ease;
+        }
+
+        .restart-btn:hover {
+            background-color: #ff8c21;
+            transform: scale(1.05);
+        }
+
+        .restart-btn:active {
+            transform: scale(0.96);
         }
     </style>
 </head>
@@ -83,11 +143,20 @@
 
 <div id="game-container">
     <div class="ui-layer">
-        <div class="score-box">دایره‌های نابودشده: <span class="score-val" id="score">0</span></div>
-        <div class="score-box">بیشترین امتیاز: <span class="score-val" id="highScore">0</span></div>
+        <div class="score-box">امتیاز: <span class="score-val" id="score">0</span></div>
+        <div class="score-box">بیشترین رکورد: <span class="score-val" id="highScore">0</span></div>
     </div>
-    <div class="hint">لوزی نارنجی را با ماوس یا لمس حرکت دهید و دایره‌ها را شکار کنید!</div>
+    
+    <div class="hint">⚪ سفیدها را شکار کن | ✖️ به دایره‌های تله برخورد نکن!</div>
+    
     <canvas id="gameCanvas" width="800" height="550"></canvas>
+
+    <!-- صفحه باخت -->
+    <div id="game-over-screen">
+        <h1 class="game-over-title">لوزی منهدم شد!</h1>
+        <p class="game-over-desc">امتیاز نهایی شما: <span class="final-score" id="finalScore">0</span></p>
+        <button class="restart-btn" id="restartBtn">شروع دوباره</button>
+    </div>
 </div>
 
 <script>
@@ -95,9 +164,13 @@
     const ctx = canvas.getContext('2d');
     const scoreEl = document.getElementById('score');
     const highScoreEl = document.getElementById('highScore');
+    const gameOverScreen = document.getElementById('game-over-screen');
+    const finalScoreEl = document.getElementById('finalScore');
+    const restartBtn = document.getElementById('restartBtn');
 
     let score = 0;
     let highScore = 0;
+    let isGameOver = false;
 
     // بازیکن (لوزی نارنجی)
     const player = {
@@ -105,45 +178,67 @@
         y: canvas.height / 2,
         targetX: canvas.width / 2,
         targetY: canvas.height / 2,
-        size: 22, // شعاع لوزی
-        angle: 0
+        size: 20
     };
 
-    // لیست دایره‌ها و ذرات متلاشی شده
-    let circles = [];
-    let particles = [];
+    let preyCircles = [];   // دایره‌های سفید (طعمه)
+    let enemyCircles = [];  // دایره‌های خطرناک (مین)
+    let particles = [];     // ذرات انفجار
 
-    // ایجاد یک دایره جدید
-    function spawnCircle() {
-        const radius = Math.random() * 10 + 12; // بین ۱۲ تا ۲۲
-        let x, y;
-        // از لبه‌های صفحه وارد شوند
-        if (Math.random() < 0.5) {
-            x = Math.random() < 0.5 ? -radius : canvas.width + radius;
-            y = Math.random() * canvas.height;
-        } else {
-            x = Math.random() * canvas.width;
-            y = Math.random() < 0.5 ? -radius : canvas.height + radius;
-        }
-
-        // زاویه و سرعت حرکت
+    // ساخت دایره سفید (طعمه)
+    function spawnPrey() {
+        const radius = Math.random() * 8 + 12;
+        const pos = getRandomEdgePos(radius);
         const speed = Math.random() * 1.5 + 1.2;
-        const targetAngle = Math.atan2(canvas.height / 2 - y, canvas.width / 2 - x) + (Math.random() - 0.5);
-        
-        circles.push({
-            x: x,
-            y: y,
+        const angle = Math.atan2(canvas.height / 2 - pos.y, canvas.width / 2 - pos.x) + (Math.random() - 0.5);
+
+        preyCircles.push({
+            x: pos.x,
+            y: pos.y,
             radius: radius,
-            vx: Math.cos(targetAngle) * speed,
-            vy: Math.sin(targetAngle) * speed
+            vx: Math.cos(angle) * speed,
+            vy: Math.sin(angle) * speed
         });
     }
 
-    // ساخت ذرات انفجار هنگام کشته شدن دایره
-    function createExplosion(x, y) {
-        for (let i = 0; i < 15; i++) {
+    // ساخت دایره تیره/تله (دشمن)
+    function spawnEnemy() {
+        const radius = 18;
+        const pos = getRandomEdgePos(radius);
+        const speed = Math.random() * 1.2 + 1.0;
+        // به سمت بازیکن پرتاب می‌شود
+        const angle = Math.atan2(player.y - pos.y, player.x - pos.x) + (Math.random() - 0.4);
+
+        enemyCircles.push({
+            x: pos.x,
+            y: pos.y,
+            radius: radius,
+            vx: Math.cos(angle) * speed,
+            vy: Math.sin(angle) * speed,
+            pulse: 0
+        });
+    }
+
+    // موقعیت تصادفی از لبه‌های کادر
+    function getRandomEdgePos(radius) {
+        if (Math.random() < 0.5) {
+            return {
+                x: Math.random() < 0.5 ? -radius : canvas.width + radius,
+                y: Math.random() * canvas.height
+            };
+        } else {
+            return {
+                x: Math.random() * canvas.width,
+                y: Math.random() < 0.5 ? -radius : canvas.height + radius
+            };
+        }
+    }
+
+    // افکت انفجار
+    function createExplosion(x, y, color, count = 15) {
+        for (let i = 0; i < count; i++) {
             const angle = Math.random() * Math.PI * 2;
-            const speed = Math.random() * 4 + 1.5;
+            const speed = Math.random() * 5 + 1.5;
             particles.push({
                 x: x,
                 y: y,
@@ -151,7 +246,7 @@
                 vy: Math.sin(angle) * speed,
                 radius: Math.random() * 3 + 1.5,
                 alpha: 1,
-                color: Math.random() > 0.4 ? '#ffffff' : '#ff7700'
+                color: color
             });
         }
     }
@@ -160,22 +255,19 @@
     function drawDiamond(x, y, size) {
         ctx.save();
         ctx.translate(x, y);
-        
-        // افکت نور و درخشش نارنجی
         ctx.shadowColor = '#ff7700';
         ctx.shadowBlur = 18;
 
         ctx.beginPath();
-        ctx.moveTo(0, -size * 1.2);   // رأس بالا
-        ctx.lineTo(size, 0);          // رأس راست
-        ctx.lineTo(0, size * 1.2);    // رأس پایین
-        ctx.lineTo(-size, 0);         // رأس چپ
+        ctx.moveTo(0, -size * 1.2);
+        ctx.lineTo(size, 0);
+        ctx.lineTo(0, size * 1.2);
+        ctx.lineTo(-size, 0);
         ctx.closePath();
-
-        ctx.fillStyle = '#ff7700'; // رنگ اصلی نارنجی
+        ctx.fillStyle = '#ff7700';
         ctx.fill();
 
-        // یک لوزی کوچک‌تر سفید داخل آن برای زیبایی و برق زدن
+        // مرکز سفید لوزی
         ctx.beginPath();
         ctx.moveTo(0, -size * 0.4);
         ctx.lineTo(size * 0.35, 0);
@@ -189,78 +281,166 @@
         ctx.restore();
     }
 
-    // کنترل با ماوس
-    window.addEventListener('mousemove', (e) => {
+    // رسم دایره دشمن (مین تیره با ضربدر)
+    function drawEnemyCircle(enemy) {
+        enemy.pulse += 0.08;
+        const glow = Math.sin(enemy.pulse) * 4 + 6;
+
+        ctx.save();
+        ctx.translate(enemy.x, enemy.y);
+        
+        // بدنه اصلی طوسی تیره با حاشیه نارنجی
+        ctx.beginPath();
+        ctx.arc(0, 0, enemy.radius, 0, Math.PI * 2);
+        ctx.fillStyle = '#26282f';
+        ctx.fill();
+        ctx.lineWidth = 2.5;
+        ctx.strokeStyle = '#ff7700';
+        ctx.shadowColor = '#ff7700';
+        ctx.shadowBlur = glow;
+        ctx.stroke();
+
+        // علامت ضربدر درون دایره
+        ctx.beginPath();
+        const s = 6;
+        ctx.moveTo(-s, -s);
+        ctx.lineTo(s, s);
+        ctx.moveTo(s, -s);
+        ctx.lineTo(-s, s);
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = 2;
+        ctx.shadowBlur = 0;
+        ctx.stroke();
+
+        ctx.restore();
+    }
+
+    // اجرای وضعیت باخت
+    function gameOver() {
+        isGameOver = true;
+        createExplosion(player.x, player.y, '#ff7700', 35); // انفجار بزرگ لوزی
+        finalScoreEl.innerText = score;
+        gameOverScreen.classList.add('active');
+    }
+
+    // ریست بازی
+    function resetGame() {
+        score = 0;
+        scoreEl.innerText = score;
+        preyCircles = [];
+        enemyCircles = [];
+        particles = [];
+        player.x = canvas.width / 2;
+        player.y = canvas.height / 2;
+        player.targetX = canvas.width / 2;
+        player.targetY = canvas.height / 2;
+        isGameOver = false;
+        gameOverScreen.classList.remove('active');
+    }
+
+    restartBtn.addEventListener('click', resetGame);
+
+    // کنترل حرکت
+    function updatePointer(e) {
+        if (isGameOver) return;
         const rect = canvas.getBoundingClientRect();
         player.targetX = e.clientX - rect.left;
         player.targetY = e.clientY - rect.top;
-    });
+    }
 
-    // کنترل لمسی برای موبایل و تبلت
+    window.addEventListener('mousemove', updatePointer);
     window.addEventListener('touchmove', (e) => {
-        const rect = canvas.getBoundingClientRect();
-        player.targetX = e.touches[0].clientX - rect.left;
-        player.targetY = e.touches[0].clientY - rect.top;
+        updatePointer(e.touches[0]);
     }, { passive: false });
 
-    // حلقه اصلی بازی
-    let spawnCounter = 0;
+    // حلقه بازی
+    let frame = 0;
 
     function gameLoop() {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-        // ۱. حرکت روان لوزی به سمت نشانگر ماوس
-        player.x += (player.targetX - player.x) * 0.15;
-        player.y += (player.targetY - player.y) * 0.15;
+        if (!isGameOver) {
+            frame++;
+            // نرم کردن حرکت لوزی
+            player.x += (player.targetX - player.x) * 0.16;
+            player.y += (player.targetY - player.y) * 0.16;
 
-        // ۲. ظاهر کردن دایره‌ها
-        spawnCounter++;
-        if (spawnCounter % 40 === 0 && circles.length < 15) {
-            spawnCircle();
-        }
+            // تولید دایره‌های سفید
+            if (frame % 35 === 0 && preyCircles.length < 12) {
+                spawnPrey();
+            }
 
-        // ۳. به‌روزرسانی و رسم دایره‌ها
-        for (let i = circles.length - 1; i >= 0; i--) {
-            const c = circles[i];
-            c.x += c.vx;
-            c.y += c.vy;
+            // تولید دایره‌های خطرناک (هرچه امتیاز بیشتر شود زودتر تولید می‌شوند)
+            const enemyRate = Math.max(60, 140 - Math.floor(score * 2.5));
+            if (frame % enemyRate === 0 && enemyCircles.length < 6) {
+                spawnEnemy();
+            }
 
-            // رسم دایره سفید
-            ctx.save();
-            ctx.beginPath();
-            ctx.arc(c.x, c.y, c.radius, 0, Math.PI * 2);
-            ctx.fillStyle = '#ffffff';
-            ctx.shadowColor = 'rgba(255, 255, 255, 0.4)';
-            ctx.shadowBlur = 8;
-            ctx.fill();
-            ctx.restore();
+            // بررسی دایره‌های سفید
+            for (let i = preyCircles.length - 1; i >= 0; i--) {
+                const c = preyCircles[i];
+                c.x += c.vx;
+                c.y += c.vy;
 
-            // بررسی برخورد لوزی با دایره (کشتن دایره)
-            const dist = Math.hypot(player.x - c.x, player.y - c.y);
-            if (dist < player.size + c.radius) {
-                createExplosion(c.x, c.y);
-                circles.splice(i, 1);
-                score++;
-                scoreEl.innerText = score;
-                if (score > highScore) {
-                    highScore = score;
-                    highScoreEl.innerText = highScore;
+                // رسم دایره سفید
+                ctx.save();
+                ctx.beginPath();
+                ctx.arc(c.x, c.y, c.radius, 0, Math.PI * 2);
+                ctx.fillStyle = '#ffffff';
+                ctx.shadowColor = '#ffffff';
+                ctx.shadowBlur = 6;
+                ctx.fill();
+                ctx.restore();
+
+                // شکار دایره توسط لوزی
+                const dist = Math.hypot(player.x - c.x, player.y - c.y);
+                if (dist < player.size + c.radius) {
+                    createExplosion(c.x, c.y, '#ffffff');
+                    preyCircles.splice(i, 1);
+                    score++;
+                    scoreEl.innerText = score;
+                    if (score > highScore) {
+                        highScore = score;
+                        highScoreEl.innerText = highScore;
+                    }
+                    continue;
                 }
-                continue;
+
+                if (c.x < -60 || c.x > canvas.width + 60 || c.y < -60 || c.y > canvas.height + 60) {
+                    preyCircles.splice(i, 1);
+                }
             }
 
-            // حذف دایره‌هایی که بیش از حد از صفحه دور شده‌اند
-            if (c.x < -60 || c.x > canvas.width + 60 || c.y < -60 || c.y > canvas.height + 60) {
-                circles.splice(i, 1);
+            // بررسی دایره‌های خطرناک (مین‌ها)
+            for (let i = enemyCircles.length - 1; i >= 0; i--) {
+                const e = enemyCircles[i];
+                e.x += e.vx;
+                e.y += e.vy;
+
+                drawEnemyCircle(e);
+
+                // برخورد مرگبار با لوزی!
+                const dist = Math.hypot(player.x - e.x, player.y - e.y);
+                if (dist < player.size + e.radius - 3) {
+                    gameOver();
+                    break;
+                }
+
+                if (e.x < -70 || e.x > canvas.width + 70 || e.y < -70 || e.y > canvas.height + 70) {
+                    enemyCircles.splice(i, 1);
+                }
             }
+
+            // رسم لوزی
+            drawDiamond(player.x, player.y, player.size);
         }
 
-        // ۴. رسم و به‌روزرسانی ذرات انفجار
+        // پردازش ذرات افکت انفجار
         for (let i = particles.length - 1; i >= 0; i--) {
             const p = particles[i];
             p.x += p.vx;
             p.y += p.vy;
-            p.alpha -= 0.035;
+            p.alpha -= 0.03;
 
             if (p.alpha <= 0) {
                 particles.splice(i, 1);
@@ -276,13 +456,9 @@
             ctx.restore();
         }
 
-        // ۵. رسم لوزی (شخصیت اصلی)
-        drawDiamond(player.x, player.y, player.size);
-
         requestAnimationFrame(gameLoop);
     }
 
-    // شروع بازی
     gameLoop();
 </script>
 
